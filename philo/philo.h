@@ -10,6 +10,7 @@ typedef struct s_philo
 {
 	int				eating;
 	size_t			start_time;
+	size_t			start;
     size_t          start_time_sleep;
 	int				flag;
     pthread_mutex_t lock;

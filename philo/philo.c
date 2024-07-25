@@ -55,52 +55,56 @@ int	ft_usleep(size_t milliseconds)
 void	*routine(void *philo)
 {
 	t_philo	*phil;
-	size_t	start;
 
 	phil = (t_philo *)philo;
-	start = get_current_time();
+	phil->start = get_current_time();
 	while (1)
 	{
 		pthread_mutex_lock(&phil->lock);
 		if (phil->flag == 1)
 		{
-			printf("%zu %d died\n", phil->end_time, phil->index);
+			printf("%zu %d died\n", get_current_time() - phil->start, phil->index);
+			pthread_mutex_unlock(&phil->lock);
 			return (NULL);
 		}
 		pthread_mutex_unlock(&phil->lock);
-		if (phil->index % 2 == 0)
+		if (phil->index % 2 == 0 && phil->flag != 1)
 		{
 			pthread_mutex_lock(phil->r_fork);
-			printf("%zu %d has taken a right fork\n", phil->start_time,
-				phil->index);
+			printf("%zu %d has taken a right fork\n", get_current_time()
+				- phil->start, phil->index);
 			pthread_mutex_lock(phil->l_fork);
-			printf("%zu %d has taken a left fork\n", phil->start_time,
+			printf("%zu %d has taken a left fork\n", get_current_time() - phil->start,
 				phil->index);
 		}
-		else
+		else if (phil->index % 2 != 0 && phil->flag != 1)
 		{
 			pthread_mutex_lock(phil->l_fork);
-			printf("%zu %d has taken a left fork\n", phil->start_time,
+			printf("%zu %d has taken a left fork\n", get_current_time() - phil->start,
 				phil->index);
 			pthread_mutex_lock(phil->r_fork);
-			printf("%zu %d has taken a right fork\n", phil->start_time,
-				phil->index);
+			printf("%zu %d has taken a right fork\n", get_current_time()
+				- phil->start, phil->index);
 		}
-		phil->start_time = get_current_time() - start;
-		printf("%zu %d is eating\n", phil->start_time, phil->index);
+		
+		phil->start_time = get_current_time();
+		if (phil->flag != 1)
+			printf("%zu %d is eating\n", get_current_time() - phil->start,
+				phil->index);
 		ft_usleep(phil->eating);
 		pthread_mutex_unlock(phil->r_fork);
 		pthread_mutex_unlock(phil->l_fork);
-		phil->start_time_sleep = get_current_time() - start;
 
 		pthread_mutex_lock(&phil->lock);
-		printf("%zu %d  is sleeping\n", phil->start_time_sleep, phil->index);
-		pthread_mutex_unlock(&phil->lock);
+		if (phil->flag != 1)
+			printf("%zu %d  is sleeping\n",get_current_time() - phil->start,
+				phil->index);
 		ft_usleep(phil->time_to_sleep);
-		phil->end_time = get_current_time() - start;
-		phil->count_time += phil->end_time;
+		pthread_mutex_unlock(&phil->lock);
+
 		pthread_mutex_lock(&phil->lock);
-		printf("%zu %d is thinking\n", phil->end_time, phil->index);
+		if (phil->flag != 1)
+			printf("%zu %d is thinking\n", get_current_time() - phil->start, phil->index);
 		pthread_mutex_unlock(&phil->lock);
 	}
 	return (NULL);
@@ -181,13 +185,20 @@ int	main(int argc, char **argv)
 		}
 		i++;
 	}
+	usleep(300);
 	while (1)
 	{
-		if (philo->count_time <= philo->end_time)
+		for (int j = 0; j < data.num_philo; j++)
 		{
-			philo->flag = 1;
-			break ;
+			if ((get_current_time() - philo[j].start_time) >= data.time_to_die)
+			{
+				philo->flag = 1;
+				break ;
+			}
+			j++;
 		}
+		if (philo->flag == 1)
+			break ;
 	}
 	i = 0;
 	while (i < data.num_philo)
