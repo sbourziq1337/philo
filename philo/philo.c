@@ -52,62 +52,53 @@ int	ft_usleep(size_t milliseconds)
 	return (0);
 }
 
-void	*routine(void *philo)
+void *routine(void *philo)
 {
-	t_philo	*phil;
+    t_philo *phil;
 
-	phil = (t_philo *)philo;
-	phil->start = get_current_time();
-	while (1)
-	{
-		pthread_mutex_lock(&phil->lock);
-		if (phil->flag == 1)
-		{
-			printf("%zu %d died\n", get_current_time() - phil->start, phil->index);
-			pthread_mutex_unlock(&phil->lock);
-			return (NULL);
-		}
-		pthread_mutex_unlock(&phil->lock);
-		if (phil->index % 2 == 0 && phil->flag != 1)
-		{
-			pthread_mutex_lock(phil->r_fork);
-			printf("%zu %d has taken a right fork\n", get_current_time()
-				- phil->start, phil->index);
-			pthread_mutex_lock(phil->l_fork);
-			printf("%zu %d has taken a left fork\n", get_current_time() - phil->start,
-				phil->index);
-		}
-		else if (phil->index % 2 != 0 && phil->flag != 1)
-		{
-			pthread_mutex_lock(phil->l_fork);
-			printf("%zu %d has taken a left fork\n", get_current_time() - phil->start,
-				phil->index);
-			pthread_mutex_lock(phil->r_fork);
-			printf("%zu %d has taken a right fork\n", get_current_time()
-				- phil->start, phil->index);
-		}
-		
-		phil->start_time = get_current_time();
-		if (phil->flag != 1)
-			printf("%zu %d is eating\n", get_current_time() - phil->start,
-				phil->index);
-		ft_usleep(phil->eating);
-		pthread_mutex_unlock(phil->r_fork);
-		pthread_mutex_unlock(phil->l_fork);
+    phil = (t_philo *)philo;
+    phil->start = get_current_time();
+    while (1)
+    {
+        pthread_mutex_lock(&phil->lock);
+        if (phil->flag == 1)
+        {
+            printf("%zu %d die\n", get_current_time() - phil->start, phil->index);
+            pthread_mutex_unlock(&phil->lock);
+            return (NULL);
+        }
+        pthread_mutex_unlock(&phil->lock);
 
-		pthread_mutex_lock(&phil->lock);
-		if (phil->flag != 1)
-			printf("%zu %d  is sleeping\n",get_current_time() - phil->start,
-				phil->index);
-		ft_usleep(phil->time_to_sleep);
-		pthread_mutex_unlock(&phil->lock);
+        if (phil->index % 2 == 0)
+        {
+            pthread_mutex_lock(phil->r_fork);
+            printf("%zu %d has taken a right fork\n", get_current_time() - phil->start, phil->index);
+            pthread_mutex_lock(phil->l_fork);
+            printf("%zu %d has taken a left fork\n", get_current_time() - phil->start, phil->index);
+        }
+        else
+        {
+            pthread_mutex_lock(phil->l_fork);
+            printf("%zu %d has taken a left fork\n", get_current_time() - phil->start, phil->index);
+            pthread_mutex_lock(phil->r_fork);
+            printf("%zu %d has taken a right fork\n", get_current_time() - phil->start, phil->index);
+        }
 
-		pthread_mutex_lock(&phil->lock);
-		if (phil->flag != 1)
-			printf("%zu %d is thinking\n", get_current_time() - phil->start, phil->index);
-		pthread_mutex_unlock(&phil->lock);
-	}
-	return (NULL);
+        phil->start_time = get_current_time();
+        printf("%zu %d is eating\n", get_current_time() - phil->start, phil->index);
+        ft_usleep(phil->eating);
+        pthread_mutex_unlock(phil->r_fork);
+        pthread_mutex_unlock(phil->l_fork);
+
+        pthread_mutex_lock(&phil->lock);
+        printf("%zu %d is sleeping\n", get_current_time() - phil->start, phil->index);
+        pthread_mutex_unlock(&phil->lock);
+        ft_usleep(phil->time_to_sleep);
+
+        pthread_mutex_lock(&phil->lock);
+        printf("%zu %d is thinking\n", get_current_time() - phil->start, phil->index);
+        pthread_mutex_unlock(&phil->lock);
+    }
 }
 
 void	ft_parsin(t_data *data, char **av)
@@ -171,9 +162,7 @@ int	main(int argc, char **argv)
 		i++;
 	}
 	i = 0;
-	philo->count_time = philo->time_to_die;
-	philo->start_time = 0;
-	philo->end_time = 0;
+	philo->start_time = get_current_time();
 	while (i < data.num_philo)
 	{
 		if (pthread_create(&philo[i].th1, NULL, &routine, &philo[i]) != 0)
@@ -185,16 +174,19 @@ int	main(int argc, char **argv)
 		}
 		i++;
 	}
-	usleep(300);
+	usleep(400);
 	while (1)
 	{
 		for (int j = 0; j < data.num_philo; j++)
 		{
-			if ((get_current_time() - philo[j].start_time) >= data.time_to_die)
+			pthread_mutex_lock(&philo->lock);
+			if ((get_current_time() - philo->start_time) >= data.time_to_die)
 			{
 				philo->flag = 1;
+				pthread_mutex_unlock(&philo->lock);
 				break ;
 			}
+			pthread_mutex_unlock(&philo->lock);
 			j++;
 		}
 		if (philo->flag == 1)
