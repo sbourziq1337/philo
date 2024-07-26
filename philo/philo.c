@@ -47,25 +47,27 @@ int	ft_usleep(size_t milliseconds)
 	size_t	start;
 
 	start = get_current_time();
-	while ((get_current_time() - start) < milliseconds)
-		usleep(500);
+	while ((get_current_time() - start) < milliseconds);
+		//usleep(500);
 	return (0);
 }
 
 void *routine(void *philo)
 {
     t_philo *phil;
+	int *result = malloc(sizeof(int));
 
+	*result = 1;
     phil = (t_philo *)philo;
     phil->start = get_current_time();
     while (1)
     {
+		usleep(500);
         pthread_mutex_lock(&phil->lock);
         if (phil->flag == 1)
         {
-            printf("%zu %d die\n", get_current_time() - phil->start, phil->index);
             pthread_mutex_unlock(&phil->lock);
-            return (NULL);
+            return((void *) result);
         }
         pthread_mutex_unlock(&phil->lock);
 
@@ -83,10 +85,12 @@ void *routine(void *philo)
             pthread_mutex_lock(phil->r_fork);
             printf("%zu %d has taken a right fork\n", get_current_time() - phil->start, phil->index);
         }
-
+		pthread_mutex_lock(&phil->lock);
         phil->start_time = get_current_time();
         printf("%zu %d is eating\n", get_current_time() - phil->start, phil->index);
+		pthread_mutex_unlock(&phil->lock);
         ft_usleep(phil->eating);
+
         pthread_mutex_unlock(phil->r_fork);
         pthread_mutex_unlock(phil->l_fork);
 
@@ -99,6 +103,7 @@ void *routine(void *philo)
         printf("%zu %d is thinking\n", get_current_time() - phil->start, phil->index);
         pthread_mutex_unlock(&phil->lock);
     }
+	return((void *) result);
 }
 
 void	ft_parsin(t_data *data, char **av)
@@ -119,7 +124,7 @@ int	main(int argc, char **argv)
 	int i;
 	t_data data;
 	t_philo *philo;
-	int number;
+	int *number;
 
 	i = 0;
 	if (argc < 5 || argc > 6)
@@ -202,11 +207,28 @@ int	main(int argc, char **argv)
 			free(data.fork);
 			return (1);
 		}
-		if (number == 0)
-			return (0);
+		if (*number == 1)
+		{
+			printf("my data is %d \n\n", *number);
+			 printf("%zu %d die\n", get_current_time() - philo->start, philo->index);
+			return(3);
+		}
 		i++;
 	}
-
+	i = 0;
+	while (i < data.num_philo)
+	{
+		if(pthread_mutex_destroy(&data.fork[i]) != 0)
+		{
+			pthread_mutex_destroy(&philo->lock);
+			write(2, "failed destroy thread\n", 22);
+			free(philo);
+			free(data.fork);
+			return (1);
+		}
+		i++;
+	}
+	pthread_mutex_destroy(&philo->lock);
 	free(philo);
 	free(data.fork);
 	return (0);
